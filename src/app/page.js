@@ -1,47 +1,79 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
+import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
-import Container from '@mui/material/Container';
+import Link from 'next/link';
+import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Container from '@mui/material/Container';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 
-export default function Home() {
+const main_colour = '#FF0000';
 
-    const handleSubmit = (event) => {
+export default function LoginPage() {
+    const router = useRouter();
+    const [error, setError] = React.useState('');
 
-        console.log("handling submit");
+    const handleSubmit = async (event) => {
         event.preventDefault();
+        setError('');
+
         const data = new FormData(event.currentTarget);
+        const email = data.get('email');
+        const pass = data.get('pass');
 
-        let email = data.get('email')
-        let pass = data.get('pass')
+        try {
+            const res = await fetch(
+                `/api/login?email=${encodeURIComponent(
+                    email
+                )}&pass=${encodeURIComponent(pass)}`
+            );
 
-        console.log("Sent email:" + email)
-        console.log("Sent pass:" + pass)
+            const json = await res.json();
+            console.log('Login API response:', json);
 
-        runDBCallAsync(`http://localhost:3000/api/login?email=${email}&pass=${pass}`)
+            if (!json.valid) {
+                setError(json.error || 'Invalid email or password.');
+                return;
+            }
+
+            const accountType = json.account_type || 'customer';
+
+            if (typeof window !== 'undefined') {
+                window.localStorage.setItem(
+                    'currentUser',
+                    JSON.stringify({ email, accountType })
+                );
+            }
+
+            router.push(accountType === 'manager' ? '/manager' : '/customer');
+        } catch (err) {
+            console.error('Network / parse error:', err);
+            setError('Network error contacting the server.');
+        }
     };
 
-
-    async function runDBCallAsync(url) {
-
-        const res = await fetch(url);
-        const data = await res.json();
-
-        if(data.data== "valid"){
-            console.log("login is valid!")
-        } else {
-            console.log("not valid  ")
-        }
-    }
-
     return (
-        <Container maxWidth="sm">
-            <Box sx={{ height: '100vh' }} >
-                <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+        <Container component="main" maxWidth="xs">
+            <Box
+                sx={{
+                    marginTop: 8,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                }}
+            >
+                <Avatar sx={{ m: 1, bgcolor: main_colour }}>
+                    <LockOutlinedIcon />
+                </Avatar>
+                <Typography component="h1" variant="h5">
+                    Login to Your Account
+                </Typography>
+                <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
                     <TextField
                         margin="normal"
                         required
@@ -58,22 +90,37 @@ export default function Home() {
                         fullWidth
                         name="pass"
                         label="Password"
-                        type="pass"
+                        type="password"
                         id="pass"
                         autoComplete="current-password"
                     />
-                    <FormControlLabel
-                        control={<Checkbox value="remember" color="primary" />}
-                        label="Remember me"
-                    />
+                    {error && (
+                        <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+                            {error}
+                        </Typography>
+                    )}
                     <Button
                         type="submit"
                         fullWidth
                         variant="contained"
-                        sx={{ mt: 3, mb: 2 }}
+                        sx={{
+                            mt: 3,
+                            mb: 2,
+                            backgroundColor: main_colour,
+                            '&:hover': { backgroundColor: main_colour },
+                        }}
                     >
-                        Sign In
+                        Login Now
                     </Button>
+                    <Grid container justifyContent="center">
+                        <Grid item>
+                            <Link href="/register">
+                                <Typography variant="body2" sx={{ cursor: 'pointer' }}>
+                                    Don&apos;t have an account? Register here
+                                </Typography>
+                            </Link>
+                        </Grid>
+                    </Grid>
                 </Box>
             </Box>
         </Container>
